@@ -9,21 +9,21 @@ export async function loadLibrary(): Promise<Lesson[]> {
 export async function saveLibrary(lessons: Lesson[]) {
   await set(
     LIBRARY_KEY,
-    lessons.filter((lesson) => !lesson.demo),
+    lessons.filter((lesson) => !lesson.demo && !lesson.bundled),
   );
 }
 /** Read progress defensively so a malformed browser entry cannot break the app. */
-export function loadProgress(id: string): Progress {
+export function loadProgress(id: string, startPage = 1): Progress {
   try {
     return {
-      page: 1,
+      page: startPage,
       notes: "",
       completed: false,
       answers: {},
       ...JSON.parse(localStorage.getItem(`lilt-progress-${id}`) ?? "{}"),
     };
   } catch {
-    return { page: 1, notes: "", completed: false, answers: {} };
+    return { page: startPage, notes: "", completed: false, answers: {} };
   }
 }
 /** Save reading position, practice notes, and answers on this device. */

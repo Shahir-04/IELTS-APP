@@ -15,13 +15,14 @@ Open the URL printed by Vite, normally `http://localhost:5173`.
 
 ## Use the app
 
-1. Try the included original lesson: three PDF pages, two listening exercises, one speaking prompt, and three playable MP3s.
-2. Select **Add material**, name the lesson, choose your PDF, and select all accompanying audio files.
-3. Open the lesson. The **This page** tab shows tracks matching references in that page's PDF text. **All tracks** shows everything uploaded with the lesson.
-4. For scanned pages or nonstandard numbering, select **Link audio to this page** and check the relevant tracks. You can link multiple tracks to a page, or one track to several pages.
-5. Use the player for speed changes (0.5–2×), ten-second skips, seeking, volume, and track repeat. Audio continues when you change PDF pages.
-6. Write notes and answers in **Notes**. Use **Speak** to record yourself, play it back, and download the recording. Download before leaving the recorder tab; recordings are held in memory only.
-7. Bookmark pages and reopen them directly from **Bookmarks**. Reading position, notes, answers, completion, bookmarks, and listening time are saved on the current device.
+1. Open **The Official Cambridge Guide to IELTS**: the supplied 398-page PDF and all 70 publisher MP3 tracks are included. The book starts at PDF page 16, its first listening exercise. Use **All tracks** to search by track, unit, test, or section, then **Open page** to jump straight to the matching exercise.
+2. The original three-page Lilt sample lesson remains available in **My library**.
+3. Select **Add material**, name the lesson, choose your PDF, and select all accompanying audio files.
+4. Open the lesson. The **This page** tab shows tracks matching references in that page's PDF text. **All tracks** shows everything uploaded with the lesson.
+5. For scanned pages or nonstandard numbering, select **Link audio to this page** and check the relevant tracks. You can link multiple tracks to a page, or one track to several pages.
+6. Use the player for speed changes (0.5–2×), ten-second skips, seeking, volume, and track repeat. Audio continues when you change PDF pages.
+7. Write notes and answers in **Notes**. Use **Speak** to record yourself, play it back, and download the recording. Download before leaving the recorder tab; recordings are held in memory only.
+8. Bookmark pages and reopen them directly from **Bookmarks**. Reading position, notes, answers, completion, bookmarks, and listening time are saved on the current device.
 
 Automatic matching supports `Track 01`, `Audio 1.03`, and `CD1 Track02` references. Suitable audio filenames include `Track 01.mp3`, `01.mp3`, `1.03 - conversation.m4a`, and `CD1 Track02.mp3`. Track `1`, `10`, and `1.1` are deliberately treated as different identifiers. Automatic matching requires PDF text; this app does not perform OCR or download missing audio. It plays files you supply.
 
@@ -36,7 +37,17 @@ A local lesson can be up to 250 MB total, subject to browser storage quota. Play
 
 You can also run `npx vercel` from this directory and follow its prompts. No deployment has been performed on your behalf.
 
-Deploying the frontend does **not** copy browser uploads to another device. To access your uploaded library everywhere, complete the cloud setup below. Without it, each browser has its own local materials. The bundled sample is available everywhere.
+Deploying the frontend does **not** copy browser uploads to another device. To access your uploaded library everywhere, complete the cloud setup below. Without it, each browser has its own local materials. The bundled Cambridge guide, its 70 MP3 tracks, and the sample lesson are available everywhere without Supabase.
+
+## Included Cambridge materials
+
+The supplied PDF and audio archive are prepared automatically before `npm run dev` and `npm run build`. The first run downloads approximately 277 MB, verifies both SHA-256 digests, and extracts exactly 70 numbered MP3s. The resulting static library is approximately 339 MB. Subsequent local runs reuse the verified downloads under `.cache/cambridge/`. Vercel prepares its own copies during the build and serves the resulting PDF and individual audio tracks from the deployment.
+
+Large files are deliberately excluded from Git. Commit all source files, including the preparation script and source manifest; do not remove the `prebuild` script. The external URLs must remain reachable during a fresh build. A source change or an incomplete download fails with a clear integrity error rather than deploying incomplete materials.
+
+This is a scanned 398-page PDF, so ordinary PDF text extraction cannot read most audio icons. `src/books/cambridge-pages.json` maps numbered audio icons and listening test sections to **physical PDF pages**, including sections continuing onto a second page. The printed book page number does not always equal the PDF page number. General Training reading sections are deliberately excluded from listening links. All 70 files are available under **All tracks**, including the introductory audio. Video clips are not present in the supplied audio archive.
+
+The first book page shown is PDF 16 (Listening Unit 1). Speaking audio is on PDF 151–153. Listening practice tests begin on PDF 155, 174, 191, 208, 227, 247, 263, and 297. Personal notes, reading position, and page-link changes remain device-local. The Cambridge files are bundled static assets and are accessible to visitors of the deployed app, like their supplied public source URLs. For additional private user uploads, use the optional cloud library below.
 
 ## Enable private cross-device materials with Supabase
 
@@ -81,14 +92,15 @@ Signing out removes cached cloud lessons from this browser. Your cloud originals
 ## Checks
 
 ```bash
-npm test                 # track matching and manual link behavior
+npm run prepare:materials # download/verify the bundled book and extract its audio
+npm test                 # track matching, page maps, and prepared assets
 npm run build            # TypeScript and optimized production output
 npm run test:browser     # real PDF, audio, upload, persistence, mobile and recording checks
 ```
 
 Browser tests use `/usr/bin/chromium` in this environment. On your own machine, install Playwright Chromium (`npx playwright install chromium`) and set `CHROMIUM_PATH` to your Chromium executable, or remove the `executablePath` setting from `playwright.config.ts` to use Playwright's downloaded browser.
 
-The browser checks passed against local storage with actual PDF/MP3 assets and a synthetic microphone. A live Supabase deployment has not been tested because no project credentials were supplied. After configuration, verify cross-device sync with your account and confirm a second account cannot read the first account's lessons.
+The browser checks passed against local storage with actual PDF/MP3 assets and a synthetic microphone. Cambridge browser checks exercise the actual PDF, matching listening and speaking tracks, practice-test continuation pages, track search, first/last audio playback, and persistent personal page links. A live Supabase deployment has not been tested because no project credentials were supplied. After configuration, verify cross-device sync with your account and confirm a second account cannot read the first account's lessons.
 
 ## Project map
 
@@ -98,6 +110,9 @@ The browser checks passed against local storage with actual PDF/MP3 assets and a
 - `src/storage.ts`: IndexedDB blobs and local progress.
 - `src/cloud.ts`: private Supabase uploads, signed file URLs, and metadata updates.
 - `supabase/setup.sql`: cloud schema and owner-only access rules.
-- `public/library/`: original sample PDF, MP3s, and transcripts.
+- `src/books/`: Cambridge library metadata and verified physical PDF page mappings.
+- `scripts/prepare-cambridge.mjs`: integrity-checked book/audio downloads and safe ZIP extraction.
+- `scripts/material-sources.json`: exact supplied source URLs, sizes, and SHA-256 digests.
+- `public/library/`: sample assets plus generated Cambridge book/audio assets.
 
 Sample material is original practice content, not an official IELTS exam. Its audio is synthesized using FFmpeg's Flite voice. The generated assets are already committed to the project folder; Python `reportlab` and FFmpeg are needed only to regenerate them with `scripts/make-demo.py`.

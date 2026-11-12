@@ -8,7 +8,7 @@ test("reads PDF pages, matches tracks, plays audio, and keeps notes", async ({
 }) => {
   const errors: string[] = [];
   page.on("pageerror", (error) => errors.push(error.message));
-  await page.goto("/");
+  await page.goto("/?lesson=lilt-original-1");
   await expect(page.getByText("Matched to page 1")).toBeVisible();
   await expect(page.locator(".pdf-loading")).toHaveCount(0);
   await expect(page.locator("canvas")).toBeVisible();
@@ -69,7 +69,7 @@ test("reads PDF pages, matches tracks, plays audio, and keeps notes", async ({
 test("imports PDF/audio and restores manual links after reload", async ({
   page,
 }) => {
-  await page.goto("/");
+  await page.goto("/?lesson=lilt-original-1");
   await page.getByRole("button", { name: "Add material", exact: true }).click();
   await page
     .getByLabel("Choose PDF", { exact: true })
@@ -111,7 +111,7 @@ test("mobile layout stays within the screen and exposes speaking practice", asyn
   page,
 }) => {
   await page.setViewportSize({ width: 390, height: 844 });
-  await page.goto("/");
+  await page.goto("/?lesson=lilt-original-1");
   await expect(page.getByText("Matched to page 1")).toBeVisible();
   expect(
     await page.evaluate(() => document.documentElement.scrollWidth),
@@ -131,7 +131,7 @@ test("speaking recorder produces a playable recording and releases the microphon
 }) => {
   const context = await browser.newContext({ permissions: ["microphone"] });
   const page = await context.newPage();
-  await page.goto("/");
+  await page.goto("/?lesson=lilt-original-1");
   await page.getByRole("button", { name: "Speak", exact: true }).click();
   await page.getByRole("button", { name: "Start recording" }).click();
   // Chromium's synthetic microphone makes recording deterministic in CI.

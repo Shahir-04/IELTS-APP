@@ -4,3 +4,5 @@ dist/
 .env.local
 test-results/
 *.tsbuildinfo
+.cache/
+public/library/cambridge/

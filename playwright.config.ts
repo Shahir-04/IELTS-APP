@@ -2,7 +2,7 @@ import { defineConfig } from "@playwright/test";
 export default defineConfig({
   testDir: "./tests/browser",
   use: {
-    baseURL: "http://127.0.0.1:5173",
+    baseURL: "http://127.0.0.1:5180",
     launchOptions: {
       executablePath: process.env.CHROMIUM_PATH || "/usr/bin/chromium",
       args: [
@@ -12,6 +12,10 @@ export default defineConfig({
       ],
     },
   },
-  webServer: { command: "npm run dev", port: 5173, reuseExistingServer: true },
+  webServer: {
+    command: "npm run dev -- --port 5180 --strictPort",
+    port: 5180,
+    reuseExistingServer: true,
+  },
   reporter: "list",
 });

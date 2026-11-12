@@ -17,6 +17,9 @@ export interface Lesson {
   pdfPath?: string;
   tracks: Track[];
   demo?: boolean;
+  bundled?: boolean;
+  publisher?: string;
+  startPage?: number;
   cloud?: boolean;
   ownerId?: string;
 }

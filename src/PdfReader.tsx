@@ -37,7 +37,13 @@ export default function PdfReader({
     setLoading(true);
     setError("");
     setDocument(null);
-    const task = getDocument(source);
+    // Fetch only the byte ranges needed for the current page of large books.
+    const task = getDocument({
+      url: source,
+      disableAutoFetch: true,
+      disableStream: true,
+      rangeChunkSize: 256 * 1024,
+    });
     task.promise
       .then((pdf) => {
         if (!disposed) {
@@ -89,12 +95,16 @@ export default function PdfReader({
           viewport,
           transform: [ratio, 0, 0, ratio, 0, 0],
         });
-        const text = await pdfPage.getTextContent();
+        // Attach both rejection handlers immediately: rapid page changes can cancel
+        // rendering while text extraction is still running on a scanned page.
+        const [, text] = await Promise.all([
+          render.promise,
+          pdfPage.getTextContent(),
+        ]);
         if (!disposed)
           onText(
             text.items.map((item) => ("str" in item ? item.str : "")).join(" "),
           );
-        await render.promise;
         if (!disposed) setLoading(false);
       } catch (reason) {
         if (
