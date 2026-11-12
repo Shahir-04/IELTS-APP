@@ -1,0 +1,14 @@
+{
+  "pdf": {
+    "url": "https://static.zollege.in/public/college_data/images/entrance/entrance_brochure/1681715122The%20Official%20Cambridge%20Guide%20to%20IELTS.pdf",
+    "sha256": "abe9aae479f0923160c3fbe5ea71729f8bb39fdb4ca147c41f40393a57613012",
+    "size": 65553206
+  },
+  "audio": {
+    "url": "https://drupal-s3fs-prod.s3.eu-west-1.amazonaws.com/files/9715/8642/0693/The_Official_Cambridge_Guide_to_IELTS_CD_Classroom_Audio.zip",
+    "sha256": "1a3a4f4e82752cbeb788536100d38657ca9f5f404720d54b55bfa7483b31750b",
+    "size": 224059652
+  },
+  "tracks": 70,
+  "pages": 398
+}

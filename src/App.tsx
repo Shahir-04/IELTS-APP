@@ -52,6 +52,7 @@ import {
   uploadLesson,
 } from "./cloud";
 import PdfReader from "./PdfReader";
+import { CAMBRIDGE_ID, loadCambridgeLesson } from "./books/cambridge";
 
 const demo: Lesson = {
   id: "lilt-original-1",
@@ -471,7 +472,7 @@ function StudyRoom({
   toggleBookmark: (key: string) => void;
 }) {
   const [progress, setProgress] = useState<Progress>(() =>
-    loadProgress(lesson.id),
+    loadProgress(lesson.id, lesson.startPage),
   );
   const [pageCount, setPageCount] = useState(0),
     [pageText, setPageText] = useState(""),
@@ -479,6 +480,7 @@ function StudyRoom({
   const [tab, setTab] = useState("Audio"),
     [allTracks, setAllTracks] = useState(false),
     [activeTrack, setActiveTrack] = useState<Track | null>(null);
+  const [trackQuery, setTrackQuery] = useState("");
   const [playing, setPlaying] = useState(false),
     [currentTime, setCurrentTime] = useState(0),
     [duration, setDuration] = useState(0),
@@ -491,7 +493,13 @@ function StudyRoom({
   const source = useFileUrl(lesson.pdf, lesson.pdfUrl),
     audioSource = useFileUrl(activeTrack?.blob, activeTrack?.url);
   const matches: Track[] = pageTracks(lesson.tracks, pageText, progress.page);
-  const shownTracks = allTracks ? lesson.tracks : matches;
+  const shownTracks = (allTracks ? lesson.tracks : matches).filter(
+    (track) =>
+      !allTracks ||
+      `${track.name} ${track.track}`
+        .toLowerCase()
+        .includes(trackQuery.toLowerCase()),
+  );
   const bookmarkKey = `${lesson.id}:${progress.page}`;
   const onPdfLoad = useCallback((count: number) => {
     setPageCount(count);
@@ -619,9 +627,10 @@ function StudyRoom({
         <div>
           <h2>{lesson.title}</h2>
           <p>
-            {lesson.demo
-              ? "Lilt original practice"
-              : lesson.category + " practice"}
+            {lesson.publisher ??
+              (lesson.demo
+                ? "Lilt original practice"
+                : lesson.category + " practice")}
             <span>•</span>
             {pageCount || "—"} pages<span>•</span>
             {lesson.tracks.length} audio tracks
@@ -778,6 +787,17 @@ function StudyRoom({
                   All tracks <span>{lesson.tracks.length}</span>
                 </button>
               </div>
+              {allTracks && lesson.tracks.length > 8 && (
+                <label className="track-search">
+                  <Search size={14} />
+                  <input
+                    aria-label="Search audio tracks"
+                    placeholder="Find a track, test, or section…"
+                    value={trackQuery}
+                    onChange={(event) => setTrackQuery(event.target.value)}
+                  />
+                </label>
+              )}
               <div className="match-status">
                 <span className="live-dot" />
                 {allTracks
@@ -812,7 +832,11 @@ function StudyRoom({
                         ? `Page ${track.pages.join(", ")}`
                         : "Detected from PDF reference"}
                       <span>•</span>
-                      {lesson.demo ? "Original practice" : "Your audio"}
+                      {lesson.bundled
+                        ? "Book audio"
+                        : lesson.demo
+                          ? "Original practice"
+                          : "Your audio"}
                     </p>
                     <div className="track-bottom">
                       <button
@@ -831,6 +855,22 @@ function StudyRoom({
                       </button>
                       <span className="audio-dots">▂ ▅ ▃ ▇ ▄ ▂ ▅ ▃ ▆ ▂ ▄</span>
                     </div>
+                    {allTracks && track.pages.length > 0 && (
+                      <button
+                        className="track-page-link"
+                        onClick={() => {
+                          changePage(track.pages[0]);
+                          setAllTracks(false);
+                          documentPanel.current?.scrollIntoView({
+                            behavior: "smooth",
+                            block: "start",
+                          });
+                        }}
+                      >
+                        Open page {track.pages[0]}
+                        <ArrowRight size={12} />
+                      </button>
+                    )}
                   </div>
                 ))}
                 {!shownTracks.length && (
@@ -898,9 +938,11 @@ function StudyRoom({
               </div>
               <div className="panel-footer">
                 <span className="live-dot" />
-                {lesson.cloud
-                  ? "Available in your cloud library"
-                  : "Your study space, saved on this device"}
+                {lesson.bundled
+                  ? "Included in your library on every device"
+                  : lesson.cloud
+                    ? "Available in your cloud library"
+                    : "Your study space, saved on this device"}
               </div>
             </>
           ) : tab === "Notes" ? (
@@ -1097,9 +1139,15 @@ function StudyRoom({
 
 /** Own the library, navigation, account connection and persistent workspace shell. */
 export default function App() {
-  const [lessons, setLessons] = useState<Lesson[]>([demo]),
+  const [lessons, setLessons] = useState<Lesson[]>(() => [
+      loadCambridgeLesson(),
+      demo,
+    ]),
     [activeId, setActiveId] = useState(
-      () => localStorage.getItem("lilt-active-lesson") ?? demo.id,
+      () =>
+        new URLSearchParams(window.location.search).get("lesson") ??
+        localStorage.getItem("lilt-active-lesson") ??
+        CAMBRIDGE_ID,
     ),
     [view, setView] = useState("Study room");
   const [modal, setModal] = useState<"upload" | "cloud" | "help" | null>(null),
@@ -1141,7 +1189,12 @@ export default function App() {
         const visible = items.filter(
           (lesson) => !lesson.cloud || lesson.ownerId === session?.user.id,
         );
-        if (!disposed) setLessons([demo, ...visible]);
+        if (!disposed)
+          setLessons([
+            loadCambridgeLesson(),
+            demo,
+            ...visible.filter((lesson) => !lesson.bundled),
+          ]);
       })
       .catch(() =>
         notify(
@@ -1206,6 +1259,15 @@ export default function App() {
     lessonsRef.current = next;
     setLessons(next);
     try {
+      if (lesson.bundled)
+        localStorage.setItem(
+          `lilt-bundled-links-${lesson.id}`,
+          JSON.stringify(
+            Object.fromEntries(
+              lesson.tracks.map((track) => [track.id, track.pages]),
+            ),
+          ),
+        );
       await updateCloudLinks(lesson);
       await saveLibrary(next);
     } catch (error) {
@@ -1318,7 +1380,7 @@ export default function App() {
     try {
       await saveLibrary(next);
       setLessons(next);
-      if (activeId === lesson.id) setActiveId(demo.id);
+      if (activeId === lesson.id) setActiveId(CAMBRIDGE_ID);
       notify("Lesson removed from this device.");
     } catch {
       notify("Could not remove this lesson. Please try again.");
@@ -1552,11 +1614,13 @@ export default function App() {
                     </div>
                     <div className="lesson-card-body">
                       <span className="eyebrow">
-                        {lesson.demo
-                          ? "ORIGINAL PRACTICE"
-                          : lesson.cloud
-                            ? "CLOUD LIBRARY"
-                            : "SAVED ON THIS DEVICE"}
+                        {lesson.bundled
+                          ? "INCLUDED BOOK & AUDIO"
+                          : lesson.demo
+                            ? "ORIGINAL PRACTICE"
+                            : lesson.cloud
+                              ? "CLOUD LIBRARY"
+                              : "SAVED ON THIS DEVICE"}
                       </span>
                       <h3>{lesson.title}</h3>
                       <p>
@@ -1598,7 +1662,7 @@ export default function App() {
                           Open lesson
                           <ArrowRight size={16} />
                         </button>
-                        {!lesson.demo && !lesson.cloud && (
+                        {!lesson.demo && !lesson.bundled && !lesson.cloud && (
                           <IconButton
                             label={`Remove ${lesson.title} from this device`}
                             onClick={() => void remove(lesson)}
